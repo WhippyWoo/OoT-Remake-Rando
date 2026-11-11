@@ -28,13 +28,6 @@ Testers: see `README_TESTERS.md`. Nothing from the game is included in this repo
 
 Scripts under `tools/` are run from the project folder with `python -m`. The first run unpacks the game's zstd dictionaries into `cache/`.
 
-## Notes from playtesting
-- The child dungeons (Deku Tree, Dodongo's Cavern, Jabu-Jabu) have the same layout as the N64 game; the
-  remake changes chests. Exception found so far: the Deku Tree 3rd-floor wall Skulltulas (see Logic).
-- Chests of type `*_NoBake` placed in `*_Static` scene files appear later, after a fight or puzzle: e.g. the
-  two Dodongo's Cavern Lizalfos fight chests, the Sacred Forest Meadow Wolfos grotto, the Hyrule Field ReDead
-  and candle grottos. They sit next to the fight's `PushAirWall_Box` walls and `EventRequestActor` trigger.
-
 ## Options
 Pass these to `logic_seed.py`, or build them on their own with `python tweaks_mod.py --skip-opening ...` (no randomization).
 | Option | What it does |
