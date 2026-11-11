@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Built and generated files (seeds, mods, spoilers, CSVs, release zips, the .exe build)
+output/
+build/
+seeds/
+cache/
+
+# Personal settings (dump path, program settings)
+config.json
+settings.json
+
+# Archives made while testing
+*.rar
+*.zip

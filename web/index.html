@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OoT Remake Randomizer</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fffdf8;--ink:#222018;--muted:#6b6658;--line:#ddd6c6;--accent:#2f6b3f;--accent-ink:#fff;--ok:#2f6b3f;--bad:#a33a2a;--warn:#8a6414;--code:#efe9dc}
+@media (prefers-color-scheme:dark){:root{--bg:#16150f;--card:#201e17;--ink:#ece6d6;--muted:#a49d8a;--line:#3a362b;--accent:#6fb07f;--accent-ink:#10140f;--ok:#7fc28f;--bad:#e2806f;--warn:#e0b45c;--code:#2a271f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:22px;margin:0;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700}
+label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+.row{display:flex;gap:8px;align-items:center}
+input[type=text],select{flex:1;min-width:0;max-width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit}
+button{padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;padding:11px 22px;font-size:16px}
+.tabs{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.tabs button{padding:5px 11px;font-size:13px}
+.tabs button.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.status{margin-top:10px;font-size:13px;padding:8px 10px;border-radius:7px;background:var(--code)}
+.status.ok{color:var(--ok)} .status.bad{color:var(--bad)}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:6px 0;margin:0;color:var(--ink);font-size:14px}
+.opt input{margin-top:4px}
+.opt b{font-weight:600}
+.opt small{display:block;color:var(--muted)}
+.opt.locked{opacity:.55}
+.desc{color:var(--muted);font-size:13px;margin-top:4px}
+pre{background:var(--code);border-radius:7px;padding:10px;margin:10px 0 0;max-height:220px;overflow:auto;font:12px/1.45 ui-monospace,Consolas,monospace;white-space:pre-wrap}
+.result h3{margin:0 0 6px;font-size:16px}
+.result ol{padding-left:20px;margin:8px 0}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font:12.5px ui-monospace,Consolas,monospace;word-break:break-all}
+textarea{width:100%;min-height:150px;margin-top:6px;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:12.5px/1.45 ui-monospace,Consolas,monospace}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:20px}
+.hidden{display:none}
+@media (max-width:520px){.row{flex-wrap:wrap} .row input{flex-basis:100%}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>OoT Remake Randomizer</h1><div class="sub">Test build <span id="ver"></span> · for the Switch 2 remake, update <span id="gamever"></span></div></div>
+  <div class="sub">Title ID <code id="tid"></code></div>
+</header>
+
+<section class="card">
+  <h2><span class="step">1</span>Your game files</h2>
+  <div class="desc">Point this at the RomFS from <b>your own</b> dumped copy of the game, including update <span class="gv"></span>. Nothing is copied or shared; the randomizer only reads it.</div>
+  <div class="tabs" style="margin-top:10px"><button id="t-dump" class="on">Dump folder</button><button id="t-split">Separate RomFS folders</button></div>
+  <div id="p-dump">
+    <label for="dump">Folder containing <code>base/romfs</code> and <code>updates/…/romfs</code></label>
+    <div class="row"><input type="text" id="dump" placeholder="e.g. D:\Dumps\OoT-Switch2"><button data-browse="dump">Browse…</button></div>
+  </div>
+  <div id="p-split" class="hidden">
+    <label for="base">Base game RomFS folder</label>
+    <div class="row"><input type="text" id="base" placeholder="…\romfs (base game)"><button data-browse="base">Browse…</button></div>
+    <label for="update">Update RomFS folder (version <span class="gv"></span>)</label>
+    <div class="row"><input type="text" id="update" placeholder="…\romfs (update)"><button data-browse="update">Browse…</button></div>
+  </div>
+  <div class="actions"><button id="check">Check game files</button></div>
+  <div id="checkmsg" class="status hidden"></div>
+</section>
+
+<section class="card">
+  <h2><span class="step">2</span>Seed</h2>
+  <label for="world">How much of the game to randomize</label>
+  <select id="world" style="width:100%"></select>
+  <label for="seed">Seed number (leave empty for a random one; share it so others get the same seed)</label>
+  <div class="row"><input type="text" id="seed" inputmode="numeric" placeholder="random"><button id="dice" title="Pick a random seed">Random</button></div>
+  <label>Options</label>
+  <div id="opts"></div>
+</section>
+
+<section class="card">
+  <h2><span class="step">3</span>Where to save it</h2>
+  <label for="out">Output folder (each seed gets its own folder with the mod and a spoiler log)</label>
+  <div class="row"><input type="text" id="out"><button data-browse="out">Browse…</button></div>
+  <div class="actions"><button class="primary" id="go" disabled>Generate seed</button></div>
+  <pre id="log" class="hidden"></pre>
+</section>
+
+<section class="card result hidden" id="result">
+  <h3 id="r-title"></h3>
+  <div id="r-checks" class="status"></div>
+  <ol>
+    <li>Copy the folder <code id="r-name"></code> into your emulator's mod folder for title <code class="tid"></code>
+      (usually: right-click the game → <i>Open Mod Data Location</i>).</li>
+    <li>Turn off any other randomizer seed: they change the same files.</li>
+    <li>Start a <b>new save file</b>.</li>
+  </ol>
+  <div class="desc"><code>spoiler.txt</code> in the seed folder lists every item and the route. Only look if you're stuck or reporting a problem.</div>
+  <div class="actions"><button id="open-folder">Open seed folder</button><button id="open-spoiler">Open spoiler log</button></div>
+  <label for="report">Found a problem? Copy this, fill it in and send it back:</label>
+  <textarea id="report" spellcheck="false"></textarea>
+  <div class="actions"><button id="copy">Copy report</button></div>
+</section>
+
+<footer><span id="backend"></span><button id="quit">Quit randomizer</button></footer>
+</main>
+<script>
+const TOKEN='__TOKEN__';
+const $=id=>document.getElementById(id);
+const api=(path,body)=>fetch(path,{method:body?'POST':'GET',headers:{'X-Token':TOKEN,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);return j});
+let info=null,mode='dump',gameOk=false,last=null,poll=null;
+
+function setMode(m){mode=m;$('t-dump').classList.toggle('on',m==='dump');$('t-split').classList.toggle('on',m==='split');
+  $('p-dump').classList.toggle('hidden',m!=='dump');$('p-split').classList.toggle('hidden',m!=='split');gameOk=false;refresh()}
+$('t-dump').onclick=()=>setMode('dump');$('t-split').onclick=()=>setMode('split');
+function refresh(){$('go').disabled=!gameOk||(poll!==null)}
+function paths(){return mode==='dump'?{dump:$('dump').value.trim()}:{base:$('base').value.trim(),update:$('update').value.trim()}}
+
+async function check(){
+  const m=$('checkmsg');m.className='status';m.textContent='Checking…';m.classList.remove('hidden');
+  try{const r=await api('/api/check',paths());
+    if(r.problems.length){gameOk=false;m.className='status bad';m.textContent=r.problems.join(' ')}
+    else{gameOk=true;m.className='status ok';m.textContent='Game files look good. Base: '+r.base+' · Update: '+r.update;
+      if(mode==='dump'){$('base').value=r.base;$('update').value=r.update}}
+  }catch(e){gameOk=false;m.className='status bad';m.textContent=e.message}
+  refresh()}
+$('check').onclick=check;
+['dump','base','update'].forEach(id=>$(id).addEventListener('input',()=>{gameOk=false;refresh()}));
+
+document.querySelectorAll('[data-browse]').forEach(b=>b.onclick=async()=>{
+  const id=b.dataset.browse;b.disabled=true;
+  try{const r=await api('/api/browse',{title:{dump:'Choose your dump folder',base:'Choose the base game RomFS',update:'Choose the update RomFS',out:'Choose where to save seeds'}[id]});
+    if(r.path){$(id).value=r.path;if(id!=='out')check()}else if(!r.path){}}
+  finally{b.disabled=false}});
+
+$('dice').onclick=()=>{$('seed').value=String(Math.floor(Math.random()*999999)+1)};
+$('seed').addEventListener('input',()=>{$('seed').value=$('seed').value.replace(/[^0-9]/g,'').slice(0,9)});
+
+async function generate(){
+  const opts=[...document.querySelectorAll('#opts input:checked')].map(i=>i.value);
+  const p=mode==='dump'?{dump:$('dump').value.trim(),base:$('base').value.trim(),update:$('update').value.trim()}:paths();
+  const req={...p,world:$('world').value,seed:$('seed').value.trim(),options:opts,out:$('out').value.trim()};
+  $('result').classList.add('hidden');$('log').classList.remove('hidden');$('log').textContent='Starting…\n';
+  try{await api('/api/generate',req)}catch(e){$('log').textContent='Could not start: '+e.message;return}
+  poll=setInterval(async()=>{const j=await api('/api/job');$('log').textContent=j.log.join('\n');$('log').scrollTop=1e9;
+    if(!j.running){clearInterval(poll);poll=null;refresh();if(j.error){$('log').textContent+='\n\nError: '+j.error}else showResult(j.result)}},500);
+  refresh()}
+$('go').onclick=generate;
+
+function showResult(r){last=r;$('result').classList.remove('hidden');
+  $('r-title').textContent='Seed ready: '+r.name;$('r-name').textContent=r.name;
+  const c=$('r-checks');
+  if(r.problems.length){c.className='status bad';c.textContent='The automatic checks found '+r.problems.length+' problem(s): '+r.problems.join('; ')+'. Please report this seed before playing it.'}
+  else{c.className='status ok';c.textContent='Automatic checks passed: files are valid and the goal is reachable.'}
+  const w=info.worlds[r.world];
+  $('report').value=['OoT Remake Randomizer bug report','Randomizer version: '+info.version+' (zstd: '+(info.backend||'missing')+')','Seed: '+r.name,
+    'World: '+r.world+' - '+w,'Options: '+(r.options.join(', ')||'none'),'Emulator / console:','',
+    'What happened:','','Where (area / room):','','What you had (items, songs):','','Can you reproduce it? (yes/no):',''].join('\n');
+  $('result').scrollIntoView({behavior:'smooth',block:'start'})}
+$('open-folder').onclick=()=>last&&api('/api/open',{path:last.folder});
+$('open-spoiler').onclick=()=>last&&api('/api/open',{path:last.spoiler});
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('report').value);$('copy').textContent='Copied!'}catch(e){$('report').select();document.execCommand('copy');$('copy').textContent='Copied!'}setTimeout(()=>$('copy').textContent='Copy report',1500)};
+$('quit').onclick=async()=>{await api('/api/quit',{});document.body.innerHTML='<main><h1>Randomizer closed</h1><p class="sub">You can close this tab.</p></main>'};
+
+api('/api/info').then(i=>{info=i;
+  $('ver').textContent=i.version;$('gamever').textContent=i.game_version;document.querySelectorAll('.gv').forEach(e=>e.textContent=i.game_version);
+  $('tid').textContent=i.title_id;document.querySelectorAll('.tid').forEach(e=>e.textContent=i.title_id);
+  $('backend').textContent='Compression: '+(i.backend||'missing');
+  for(const [k,v] of Object.entries(i.worlds)){const o=document.createElement('option');o.value=k;o.textContent=v;$('world').appendChild(o)}
+  const s=i.settings||{};
+  $('world').value=s.world||'forest_temple';$('out').value=s.out||'';
+  if(s.dump){$('dump').value=s.dump}
+  if(s.base&&!s.dump){setMode('split')}
+  $('base').value=s.base||'';$('update').value=s.update||'';
+  for(const o of i.options){const d=document.createElement('label');d.className='opt'+(o.ready?'':' locked');
+    d.innerHTML='<input type="checkbox" value="'+o.id+'"'+(o.ready?'':' disabled')+((s.options||[]).includes(o.id)&&o.ready?' checked':'')+'><span><b></b><small></small></span>';
+    d.querySelector('b').textContent=o.label;d.querySelector('small').textContent=o.desc;$('opts').appendChild(d)}
+  if(s.dump||s.base)check()});
+</script>
+</body>
+</html>
