@@ -1,6 +1,16 @@
 # Logic core: locations with access rules, reachability, and an assumed-fill item placer.
 import random
 
+# Progressive items: a later tier counts as another copy of the first one (two 'Item_Hookshot' = Longshot), so rules
+# write state.has('Item_Hookshot',2). In a chest, each copy gives the next tier Link doesn't have yet
+# (see patch.ModBuilder.set_chest_item); that game feature allows two tiers.
+PROGRESSIVE={'Item_Hookshot':('Item_Hookshot','Item_Longshot'),
+             'Item_Gauntlet_Silver':('Item_Gauntlet_Silver','Item_Gauntlet_Gold')}
+_BASE={tier:base for base,tiers in PROGRESSIVE.items() for tier in tiers}
+def progressive(item):
+    """The pool name of an item: the first tier for a progressive item, otherwise the item itself."""
+    return _BASE.get(item,item)
+
 class Location:
     """A place that gives an item.
     fixed:     a vanilla gift we don't randomize (yet); it's an event the logic knows about, never patched.
@@ -28,28 +38,34 @@ def reachable(locations,state,placed):
                 if loc.name in placed: state.items.append(placed[loc.name])
     return state,got
 
-def assumed_fill(locations,progression,filler,rng,goal,restricted=()):
+def assumed_fill(locations,progression,filler,rng,goal,restricted=(),spot_ok=lambda item,loc:True):
     """Place progression items so the seed stays beatable, then restricted items (e.g. a dungeon's Map,
     which must stay in its dungeon) in their allowed spots, then the rest at random.
     Assumed fill: each progression item goes to a spot reachable while assuming Link already
-    has every progression item not placed yet."""
+    has every progression item not placed yet. spot_ok(item, location) can rule spots out for an item
+    (e.g. progressive items only fit chests that can swap to the next tier)."""
     placed={l.name:l.vanilla for l in locations if l.fixed}
     open_spot=lambda l: l.name not in placed and not l.junk_only
     todo=list(progression); rng.shuffle(todo)
     while todo:
         item=todo.pop()
         st,reach=reachable(locations,State(todo),placed)
-        spots=[l for l in reach if open_spot(l)]
+        spots=[l for l in reach if open_spot(l) and spot_ok(item,l)]
         if not spots: raise RuntimeError('no reachable spot for '+item)
         placed[rng.choice(spots).name]=item
     filler=list(filler)
     for item,allowed in restricted:
-        spots=[l for l in locations if open_spot(l) and allowed(l)]
+        spots=[l for l in locations if open_spot(l) and allowed(l) and spot_ok(item,l)]
         if not spots: raise RuntimeError('no allowed spot for '+item)
         placed[rng.choice(spots).name]=item; filler.remove(item)
-    rest=[l for l in locations if l.name not in placed]; rng.shuffle(filler)
+    rest=[l for l in locations if l.name not in placed]
     if len(filler)!=len(rest): raise RuntimeError('item pool (%d) and empty locations (%d) differ'%(len(filler),len(rest)))
-    for loc,item in zip(rest,filler): placed[loc.name]=item
+    rng.shuffle(filler); rng.shuffle(rest)
+    picky=lambda item: not all(spot_ok(item,l) for l in rest)
+    for item in sorted(filler,key=lambda i: not picky(i)):   # items with fewer possible spots first
+        spot=next((l for l in rest if spot_ok(item,l)),None)
+        if spot is None: raise RuntimeError('no spot left for '+item)
+        placed[spot.name]=item; rest.remove(spot)
     final,_=reachable(locations,State(),placed)
     if not goal(final): raise RuntimeError('seed is not beatable')
     return placed

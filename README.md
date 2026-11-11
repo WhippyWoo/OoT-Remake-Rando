@@ -111,6 +111,16 @@ The new `Item_ScrubBusinessSeed` collectible (chests and scrubs) has no N64 equi
   quest, Ruto in Jabu-Jabu, Dampe's race, minigames). Many `GetEventName` values (e.g. `ForestTemple_GetBow`, the Map/Compass
   ones) don't exist in any event flow; removing them is harmless.
 
+## Progressive items
+`lib/logic.py` `PROGRESSIVE`: the Hookshot/Longshot and Silver/Gold Gauntlets. In the pool a later tier is another copy of
+the first (rules use `state.has('Item_Hookshot',2)` for the Longshot). In the mod each copy is a chest that gives the
+first tier, or the second if Link already has the first. That's the game's own substitute chest (`Obj_TBox_A_06`, vanilla
+for the Deku Shield chests that give rupees once you own a shield): `Drop__CheckActor` + `Drop__DropActor_Substitute`,
+checked in the chest's AI file with the pouch count of the check item. Any small chest can switch to it (A_01 -> A_06,
+A_01_NoBake -> A_06_NoBake), so progressive copies only go in small chests. Tested in game: substitution works on a
+converted chest, and the pouch still counts a lower tier after an upgrade (so one check can't do three tiers; bags,
+quivers etc. need a second check in the chest's AI file). Moving any item into a vanilla substitute chest clears its check.
+
 ## Event flows (NPC gifts, songs, shops)
 `lib/evfl.py` reads all 914 `Event/EventFlow/*.bfevfl.zs` files (653 flowcharts, 261 cutscene timelines) and
 `EvflWriter` changes parameter values. New strings are appended to the end of the string pool, so only the

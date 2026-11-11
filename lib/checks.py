@@ -3,12 +3,13 @@ import os,copy,glob
 from .game import BCETT_DICT,zread,actor_hash
 from .bymlrw import read
 from .rstb import Rstb
-from .patch import ITEM_EVENTS
-from .logic import State,reachable
+from .patch import ITEM_EVENTS,SUBSTITUTE_CHEST,SUBSTITUTE_KEYS
+from .logic import State,reachable,progressive
 from . import zst
 
 def check_files(game,mod,problems):
-    """Every changed scene differs only in chest contents (and removed item-specific chest events); compressed
+    """Every changed scene differs only in chest contents (and removed item-specific chest events, cleared or
+    added substitute checks); compressed
     headers carry the uncompressed size; size table entries cover the new files. Returns ({chest hash: item}, n files)."""
     rstb_rel=game.rstb_rel(); rstb_path=os.path.join(mod,rstb_rel)
     if not zst.frame_ok(open(rstb_path,'rb').read(5),False): problems.append('bad compression header: '+rstb_rel)
@@ -26,6 +27,10 @@ def check_files(game,mod,problems):
             items[actor_hash(a)]=dx['Drop__DropActor']
             dx.pop('Drop__DropActor'); dy.pop('Drop__DropActor',None)
             if dy.get('GetEventName') in ITEM_EVENTS and 'GetEventName' not in dx: dy.pop('GetEventName')
+            for k in SUBSTITUTE_KEYS:   # cleared, or set for a progressive item (with the substitute chest variant)
+                if k not in dx: dy.pop(k,None)
+                elif SUBSTITUTE_CHEST.get(y['Gyaml'])==x['Gyaml']: dy[k]=dx[k]
+            if SUBSTITUTE_CHEST.get(y['Gyaml'])==x['Gyaml']: y['Gyaml']=x['Gyaml']
             if x!=y: problems.append('chest changed beyond item/event in %s (%s)'%(rel,actor_hash(a)))
         for a in new['Actors']:
             if 'Drop__DropActor' in (a.get('Dynamic') or {}): items.setdefault(actor_hash(a),a['Dynamic']['Drop__DropActor'])
@@ -35,7 +40,7 @@ def check_files(game,mod,problems):
 def check_logic(world,items,problems):
     """Reading the chest contents back from the mod: the goal is reachable, dungeon Maps/Compasses are in their
     dungeon, and no progression item sits in a junk-only chest. world.SETTINGS must match the seed's options."""
-    placed={l.name:(l.vanilla if l.fixed else items.get(l.hash,l.vanilla)) for l in world.LOCATIONS}   # unchanged files keep vanilla items
+    placed={l.name:(l.vanilla if l.fixed else progressive(items.get(l.hash,l.vanilla))) for l in world.LOCATIONS}   # unchanged files keep vanilla items
     final,_=reachable(world.LOCATIONS,State(),placed)
     if not world.goal(final): problems.append('logic replay: goal NOT reachable')
     for it,allowed in world.RESTRICTED:

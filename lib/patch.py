@@ -17,6 +17,11 @@ ITEM_EVENTS={'Get_StoneOfForest_GetSword','Get_StoneOfFire_GetBombBag','ForestTe
              'WaterTemple_GetMap','WaterTemple_GetCompass','ShadowTemple_GetMap','ShadowTemple_GetCompass',
              'SpiritTemple_GetCompass','BottomOfTheWell_GetCompass'}
 
+# Chest variants with the substitute check (see ModBuilder.set_chest_item)
+SUBSTITUTE_CHEST={'Obj_TBox_A_01':'Obj_TBox_A_06','Obj_TBox_A_01_NoBake':'Obj_TBox_A_06_NoBake',
+                  'Obj_TBox_A_06':'Obj_TBox_A_06','Obj_TBox_A_06_NoBake':'Obj_TBox_A_06_NoBake'}
+SUBSTITUTE_KEYS=('Drop__CheckActor','Drop__DropActor_Substitute')
+
 class ModBuilder:
     def __init__(self,game,out_dir,name,areas=None,romfs_dir=None):
         """Writes to <out_dir>/mods/<title id>/<name>/romfs, or to romfs_dir if given."""
@@ -24,17 +29,34 @@ class ModBuilder:
         self.scenes={}; self.changed=set(); self.extra={}
         for rel in game.scene_files():
             if areas is None or area_of(rel) in areas: self.scenes[rel]=game.read_scene(rel)
-    def set_chest_item(self,hash,item):
-        """Put `item` in the chest with this Hash in every scene file it appears in (child + adult copies)."""
+    def set_chest_item(self,hash,item,upgrade=None):
+        """Put `item` in the chest with this Hash in every scene file it appears in (child + adult copies).
+        upgrade=(have, better): the chest gives `better` instead if Link already has `have` (progressive items).
+        This uses the game's own "substitute" chest (Obj_TBox_A_06, normally a Deku Shield chest that gives rupees
+        once you own the shield); the chest becomes that variant. A moved item also clears an existing substitute,
+        or a Deku Shield chest would hand out rupees instead of the randomized item."""
         hits=0
         for rel,(ver,root) in self.scenes.items():
             for a in root.get('Actors',[]):
                 if actor_hash(a)!=hash: continue
                 dyn=a['Dynamic']; hits+=1
-                if dyn['Drop__DropActor']==item: continue
+                if dyn['Drop__DropActor']==item and not upgrade: continue
                 dyn['Drop__DropActor']=item; self.changed.add(rel)
                 if dyn.get('GetEventName') in ITEM_EVENTS: del dyn['GetEventName']
+                for k in SUBSTITUTE_KEYS: dyn.pop(k,None)
+                if upgrade:
+                    if a['Gyaml'] not in SUBSTITUTE_CHEST: raise ValueError('%s (%d) has no substitute variant'%(a['Gyaml'],hash))
+                    a['Gyaml']=SUBSTITUTE_CHEST[a['Gyaml']]
+                    dyn['Drop__CheckActor'],dyn['Drop__DropActor_Substitute']=upgrade
         if not hits: raise KeyError('no chest with hash %d'%hash)
+    def can_substitute(self,hash):
+        """Whether every copy of this chest has a substitute variant (small chests; not big or Lens of Truth ones)."""
+        if not hasattr(self,'_substitute'):
+            self._substitute={}
+            for ver,root in self.scenes.values():
+                for a in root.get('Actors',[]):
+                    h=actor_hash(a); self._substitute[h]=self._substitute.get(h,True) and a.get('Gyaml') in SUBSTITUTE_CHEST
+        return self._substitute.get(hash,False)
     def add_file(self,rel,data,dict_=None,original_size=None):
         """Any other changed file (event settings, save-data list, actor packs). Files ending in .zs are compressed.
         original_size: the unmodified file's size, so its size table entry can grow by the same amount."""

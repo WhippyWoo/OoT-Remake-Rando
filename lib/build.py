@@ -1,7 +1,7 @@
 # Builds a logic seed: item placement, patched files, options, spoiler log and checks. Used by logic_seed.py and the GUI.
-VERSION='0.1.0'
-import os,random,importlib
-from .logic import assumed_fill,playthrough
+VERSION='0.1.1'
+import os,random,importlib,collections
+from .logic import assumed_fill,playthrough,progressive,PROGRESSIVE
 from .patch import ModBuilder
 from . import tweaks
 from .checks import check_files,check_logic
@@ -36,14 +36,20 @@ def build_seed(game,world_name,seed,options,out_dir=None,romfs_dir=None,spoiler_
     options=[o for o in tweaks.OPTIONS if o in options]
     seed=seed if seed is not None else random.randrange(1,10**6)
     world=load_world(world_name,options); name=seed_name(world_name,seed,options)
-    log('Placing items (seed %d)...'%seed)
-    locs=world.LOCATIONS; filler=[l.vanilla for l in locs if not l.fixed]
-    for p in world.PROGRESSION: filler.remove(p)
-    placed=assumed_fill(locs,world.PROGRESSION,filler,random.Random(seed),world.goal,world.RESTRICTED)
     log('Reading game files...')
     mod=ModBuilder(game,out_dir,name,world.AREAS,romfs_dir=romfs_dir)
+    log('Placing items (seed %d)...'%seed)
+    locs=world.LOCATIONS; filler=[progressive(l.vanilla) for l in locs if not l.fixed]
+    for p in world.PROGRESSION: filler.remove(p)
+    pool=collections.Counter(filler+list(world.PROGRESSION))
+    prog={b:PROGRESSIVE[b] for b in PROGRESSIVE if pool[b]>=2}   # progressive when the pool has more than one tier
+    spot_ok=lambda item,l: item not in prog or mod.can_substitute(l.hash)
+    placed=assumed_fill(locs,world.PROGRESSION,filler,random.Random(seed),world.goal,world.RESTRICTED,spot_ok)
     for l in locs:
-        if not l.fixed: mod.set_chest_item(l.hash,placed[l.name])
+        if l.fixed: continue
+        it=placed[l.name]
+        if it in prog: mod.set_chest_item(l.hash,prog[it][0],upgrade=prog[it])
+        else: mod.set_chest_item(l.hash,it)
     if options: log('Applying options: %s'%', '.join(options))
     tweaks.apply(mod,options)
     log('Writing mod files...'); path=mod.build()
@@ -54,7 +60,8 @@ def build_seed(game,world_name,seed,options,out_dir=None,romfs_dir=None,spoiler_
         f.write('Options: %s\n\nLocations:\n'%(', '.join(options) or 'none'))
         for l in locs:
             if l.fixed: continue
-            f.write('  %-46s %s%s%s\n'%(l.name,placed[l.name],'  (vanilla)' if placed[l.name]==l.vanilla else '','  [junk only]' if l.junk_only else ''))
+            it=placed[l.name]; shown=' then '.join(prog[it])+' (progressive)' if it in prog else it
+            f.write('  %-46s %s%s%s\n'%(l.name,shown,'  (vanilla)' if it==progressive(l.vanilla) and it not in prog else '','  [junk only]' if l.junk_only else ''))
         if world.PROGRESSION:
             f.write('\nPlaythrough (progression items by sphere):\n')
             for i,sph in enumerate(playthrough(locs,placed,world.PROGRESSION)):
