@@ -4,6 +4,8 @@ from .game import BCETT_DICT,zread,actor_hash
 from .bymlrw import read
 from .rstb import Rstb
 from .sarc import sarc_files
+from .evfl import Evfl
+from .game import ZS_DICT
 from .patch import ITEM_EVENTS,SUBSTITUTE_CHEST,SUBSTITUTE_KEYS
 from .logic import State,reachable,progressive
 from . import zst
@@ -49,10 +51,41 @@ def check_files(game,mod,problems):
             if b>a and old_rstb.get(key) is not None and new_rstb.get(key)<old_rstb.get(key)+(b-a): problems.append('size table entry too small: '+key)
     return items,len(files)
 
-def check_logic(world,items,problems):
+def check_events(game,mod,problems):
+    """Changed event files parse and fit their size table entries (event rule: size rounded up to 32, plus 272)."""
+    rstb=Rstb(zread(os.path.join(mod,game.rstb_rel())))
+    for path in sorted(glob.glob(os.path.join(mod,'Event','EventFlow','*.bfevfl.zs'))):
+        rel=os.path.relpath(path,mod).replace(os.sep,'/')
+        if not zst.frame_ok(open(path,'rb').read(5),True): problems.append('bad compression header: '+rel)
+        data=zread(path,game.dict(ZS_DICT))
+        try: Evfl(data)
+        except Exception as e: problems.append('event file does not parse: %s (%s)'%(rel,e))
+        if (rstb.get(rel[:-3]) or 0)<((len(data)+31)&~31)+272: problems.append('size table entry too small: '+rel)
+
+def gift_items(game,mod,locations):
+    """{location name: item} for gift locations, read back from the mod's event files (vanilla files if unchanged)."""
+    out={}; cache={}
+    for l in locations:
+        if not l.gift: continue
+        got=set()
+        for step in l.gift:
+            tag,_,param=step.split(':'); flow,idx=tag.split('#'); rel='Event/EventFlow/%s.bfevfl.zs'%flow
+            if rel not in cache:
+                p=os.path.join(mod,rel); cache[rel]=Evfl(zread(p if os.path.exists(p) else game.path(rel),game.dict(ZS_DICT)))
+            f=cache[rel]; ev=f.events[int(idx)]
+            params=f.subflow(ev)[1] if ev['kind']=='subflow' else ev['params']
+            got.add(params[param])
+        out[l.name]=got.pop() if len(got)==1 else 'MISMATCH:'+'/'.join(sorted(got))
+    return out
+
+def check_logic(world,items,problems,gifts=None):
     """Reading the chest contents back from the mod: the goal is reachable, dungeon Maps/Compasses are in their
     dungeon, and no progression item sits in a junk-only chest. world.SETTINGS must match the seed's options."""
-    placed={l.name:(l.vanilla if l.fixed else progressive(items.get(l.hash,l.vanilla))) for l in world.LOCATIONS}   # unchanged files keep vanilla items
+    gifts=gifts or {}
+    placed={l.name:(l.vanilla if l.fixed else progressive(gifts.get(l.name,l.vanilla) if l.gift else items.get(l.hash,l.vanilla)))
+            for l in world.LOCATIONS}   # unchanged files keep vanilla items
+    for name,it in gifts.items():
+        if it.startswith('MISMATCH'): problems.append('gift steps disagree: %s (%s)'%(name,it))
     final,_=reachable(world.LOCATIONS,State(),placed)
     if not world.goal(final): problems.append('logic replay: goal NOT reachable')
     for it,allowed in world.RESTRICTED:

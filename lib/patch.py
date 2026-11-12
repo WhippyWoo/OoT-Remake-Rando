@@ -1,6 +1,7 @@
 # Builds a mod folder: changes chest contents in scene files and keeps the resource size table in step.
 import os
-from .game import TITLE_ID,BCETT_DICT,zread,zwrite,actor_hash,area_of
+from .game import TITLE_ID,BCETT_DICT,ZS_DICT,zread,zwrite,actor_hash,area_of
+from .evfl import Evfl,EvflWriter
 from .bymlrw import write
 from .rstb import Rstb
 from . import progressive
@@ -27,7 +28,7 @@ class ModBuilder:
     def __init__(self,game,out_dir,name,areas=None,romfs_dir=None):
         """Writes to <out_dir>/mods/<title id>/<name>/romfs, or to romfs_dir if given."""
         self.game=game; self.mod=romfs_dir or os.path.join(out_dir,'mods',TITLE_ID,name,'romfs')
-        self.scenes={}; self.changed=set(); self.extra={}; self.three_tier=False; self.grow={}
+        self.scenes={}; self.changed=set(); self.extra={}; self.three_tier=False; self.grow={}; self.events={}
         for rel in game.scene_files():
             if areas is None or area_of(rel) in areas: self.scenes[rel]=game.read_scene(rel)
     def set_chest_item(self,hash,item,upgrade=None):
@@ -53,6 +54,14 @@ class ModBuilder:
                         if progressive.NEXT_TIER.get(upgrade[1])!=upgrade[2]: raise ValueError('unknown tier chain %r'%(upgrade,))
                         self.three_tier=True
         if not hits: raise KeyError('no chest with hash %d'%hash)
+    def set_gift_item(self,steps,item):
+        """Change what an event hands out: every step ('Flow#event:routine:parameter') gets `item`."""
+        for step in steps:
+            tag,_,param=step.split(':'); flow,idx=tag.split('#'); rel='Event/EventFlow/%s.bfevfl.zs'%flow
+            if rel not in self.events:
+                raw=zread(self.game.path(rel),self.game.dict(ZS_DICT)); self.events[rel]=(Evfl(raw),EvflWriter(raw))
+            f,w=self.events[rel]; ev=f.events[int(idx)]
+            off,_=f.param_ref(f.q(ev['off']+0x10),param); w.set_string(off,item)
     def _chest_info(self):
         if not hasattr(self,'_info'):
             self._info={}   # hash -> (all copies have a substitute variant, area)
@@ -81,6 +90,10 @@ class ModBuilder:
             else: os.makedirs(os.path.dirname(out),exist_ok=True); open(out,'wb').write(data)
             key=rel[:-3] if rel.endswith('.zs') else rel; old=rstb.get(key)
             if old is not None and orig is not None and len(data)>orig: rstb.set(key,old+((len(data)-orig+31)&~31))
+        for rel,(f,w) in self.events.items():
+            data=w.build(); zwrite(data,os.path.join(self.mod,rel),self.game.dict(ZS_DICT))
+            need=((len(data)+31)&~31)+272       # size table rule for event files
+            if need>(rstb.get(rel[:-3]) or 0): rstb.set(rel[:-3],need)
         for key,extra in self.grow.items():
             old=rstb.get(key)
             if old is None: raise KeyError('no size table entry for '+key)

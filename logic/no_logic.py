@@ -1,4 +1,4 @@
-"""No logic: every chest in the game is shuffled. Goal: none (seeds can be unbeatable).
+"""No logic: every chest in the game and the NPC gifts in logic/gifts.py are shuffled. Goal: none (seeds can be unbeatable).
 
 For trying the shuffle across the whole game before logic exists. Items go anywhere, except:
 - small keys and boss keys stay in their vanilla chests (the remake's key item counts for the dungeon you're in),
@@ -8,6 +8,7 @@ Boss heart containers and freestanding items are not chests and aren't shuffled 
 Location list made from tools/locations.py's output; names match the logic worlds where those cover the chest.
 """
 from lib.logic import Location
+from logic.gifts import GIFTS
 
 KEYS=('Item_Dungeon_SmallKey','Item_Dungeon_BossKey')
 CHESTS=[   # (name, chest hash, vanilla item, area)
@@ -194,7 +195,7 @@ CHESTS=[   # (name, chest hash, vanilla item, area)
     ("Zora's Fountain Chest",15055117029957340138,'TBox_Rupee_Purple','ZoraFountain'),
     ('ZR Seed Chest',8838426083116998768,'Item_ScrubBusinessSeed','ZoraRiver'),
 ]
-LOCATIONS=[Location(n,h,it,region=a,fixed=it in KEYS) for n,h,it,a in CHESTS]
+LOCATIONS=[Location(n,h,it,region=a,fixed=it in KEYS) for n,h,it,a in CHESTS]+GIFTS
 PROGRESSION=[]
 DUNGEONS=('BottomOfTheWell', 'DodongoCavern', 'FireTemple', 'ForestTemple', 'IceCavern', 'InsideJabuJabuBelly', 'InsideTheDekuTree', 'ShadowTemple', 'SpiritTemple', 'WaterTemple')
 RESTRICTED=[(it,lambda l,d=d:l.region==d) for d in DUNGEONS for it in ('Item_Dungeon_Map','Item_Dungeon_Compass')

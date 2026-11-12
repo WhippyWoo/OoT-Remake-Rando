@@ -65,7 +65,7 @@ The new `Item_ScrubBusinessSeed` collectible (chests and scrubs) has no N64 equi
   - Bombs need the Goron Bracelet: without it Link pulls a bomb out and puts it straight back.
     Any rule that uses bombs must require Bomb Bag **and** Goron Bracelet.
     Option `--bombs-without-bracelet` removes this (see Options).
-- `logic/all_chests.py`: no logic, for trying the whole-game shuffle. 182 chests (generated from `tools/locations.py`'s CSV):
+- `logic/no_logic.py`: no logic, for trying the whole-game shuffle. 182 chests (generated from `tools/locations.py`'s CSV):
   small keys and boss keys stay vanilla, each Map/Compass stays in its dungeon, and only the Treasure Chest Shop's final
   heart-piece chest is used (the minigame picks the other chests' contents). Heart containers and freestanding items aren't chests.
 - `lib/patch.py`: `ModBuilder` writes chest changes. Item-specific chest events (`ITEM_EVENTS`, e.g. the Kokiri Sword

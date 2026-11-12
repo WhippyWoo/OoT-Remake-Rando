@@ -10,7 +10,7 @@ Usage:  python verify.py --mod RandoDodongo_N --world dodongo
 import argparse,os
 from lib.game import Game,TITLE_ID,PROJECT,config
 from lib.build import WORLDS,load_world
-from lib.checks import check_files,check_logic
+from lib.checks import check_files,check_logic,check_events,gift_items
 
 def main():
     ap=argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -21,7 +21,8 @@ def main():
     mod=os.path.join(args.out,'mods',TITLE_ID,name,'romfs')
     items,nfiles=check_files(game,mod,problems)
     options=['bombs_without_bracelet'] if os.path.exists(os.path.join(mod,'Pack','Actor','Item_Bomb.pack.zs')) else []
-    check_logic(load_world(args.world,options),items,problems)
+    check_events(game,mod,problems); world=load_world(args.world,options)
+    check_logic(world,items,problems,gift_items(game,mod,world.LOCATIONS))
     print('%s: %d scene files checked, %d problems'%(name,nfiles,len(problems)))
     for p in problems: print('  '+p)
 

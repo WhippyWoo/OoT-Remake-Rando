@@ -24,7 +24,7 @@ Needs Python 3.8+ and zstd support: Python 3.14+ has it built in, otherwise `pip
 | `python tweaks_mod.py --skip-opening` | Builds a mod with only the chosen options, no randomization. |
 
 Worlds: `forest` (Kokiri Forest + Deku Tree), `dodongo` (to King Dodongo), `jabu` (all three child dungeons),
-`forest_temple` (to Phantom Ganon), `all_chests` (no logic, every chest in the game, may be unbeatable).
+`forest_temple` (to Phantom Ganon), `no_logic` (no logic, every chest in the game, may be unbeatable).
 
 Options: `--bombs-without-bracelet`, `--skip-opening`, `--skip-owls` (`--skip-child-zelda` is experimental and breaks
 story progress).

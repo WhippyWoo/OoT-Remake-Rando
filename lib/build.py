@@ -4,14 +4,14 @@ import os,random,importlib,collections
 from .logic import assumed_fill,playthrough,progressive,PROGRESSIVE
 from .patch import ModBuilder
 from . import tweaks
-from .checks import check_files,check_logic
+from .checks import check_files,check_logic,check_events,gift_items
 
 WORLDS={   # world module -> description shown to players
     'forest':'Kokiri Forest + Deku Tree (goal: Queen Gohma)',
     'dodongo':'Child Link to King Dodongo',
     'jabu':'All three child dungeons (goal: the three Spiritual Stones)',
     'forest_temple':'Through adult Link\'s first dungeon (goal: Phantom Ganon)',
-    'all_chests':'No logic: every chest in the game (may be unbeatable)',
+    'no_logic':'No logic: every chest and some NPC gifts (may be unbeatable)',
 }
 OPTION_INFO={   # option -> (label, description, ready for players)
     'bombs_without_bracelet':('Bombs without Goron Bracelet','Bombs work without the bracelet.',True),
@@ -53,7 +53,8 @@ def build_seed(game,world_name,seed,options,out_dir=None,romfs_dir=None,spoiler_
     for l in locs:
         if l.fixed: continue
         it=placed[l.name]
-        if it in prog: mod.set_chest_item(l.hash,prog[it][0],upgrade=prog[it])
+        if l.gift: mod.set_gift_item(l.gift,it)
+        elif it in prog: mod.set_chest_item(l.hash,prog[it][0],upgrade=prog[it])
         else: mod.set_chest_item(l.hash,it)
     if options: log('Applying options: %s'%', '.join(options))
     tweaks.apply(mod,options)
@@ -74,5 +75,6 @@ def build_seed(game,world_name,seed,options,out_dir=None,romfs_dir=None,spoiler_
             f.write('  Then: the goal (%s)\n'%world.__doc__.split('Goal: ')[1].split('.')[0])
         else: f.write('\nNo logic: no playthrough. Keys stay in their vanilla chests.\n')
     log('Checking the result...')
-    problems=[]; items,_=check_files(game,path,problems); check_logic(world,items,problems)
+    problems=[]; items,_=check_files(game,path,problems); check_events(game,path,problems)
+    check_logic(world,items,problems,gift_items(game,path,world.LOCATIONS))
     return dict(name=name,seed=seed,mod=path,spoiler=spoiler,problems=problems)

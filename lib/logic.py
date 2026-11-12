@@ -15,10 +15,12 @@ class Location:
     """A place that gives an item.
     fixed:     a vanilla gift we don't randomize (yet); it's an event the logic knows about, never patched.
     junk_only: a chest whose exact requirements aren't confirmed; it only swaps junk, so it can never
-               hide something the seed needs."""
-    def __init__(self,name,hash,vanilla,rule=lambda s:True,region='',fixed=False,junk_only=False):
+               hide something the seed needs.
+    gift:      for an item handed out by an event instead of a chest: the event steps whose item parameter
+               changes ('Flow#event:routine:parameter', as listed by tools/gift_locations.py)."""
+    def __init__(self,name,hash,vanilla,rule=lambda s:True,region='',fixed=False,junk_only=False,gift=None):
         self.name=name; self.hash=hash; self.vanilla=vanilla; self.rule=rule; self.region=region
-        self.fixed=fixed; self.junk_only=junk_only
+        self.fixed=fixed; self.junk_only=junk_only; self.gift=gift
 
 class State:
     """The items Link has. Rules ask e.g. state.has('Item_Range_SlingShot')."""
