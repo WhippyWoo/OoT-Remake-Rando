@@ -43,7 +43,12 @@ def build_seed(game,world_name,seed,options,out_dir=None,romfs_dir=None,spoiler_
     for p in world.PROGRESSION: filler.remove(p)
     pool=collections.Counter(filler+list(world.PROGRESSION))
     prog={b:PROGRESSIVE[b] for b in PROGRESSIVE if pool[b]>=2}   # progressive when the pool has more than one tier
-    spot_ok=lambda item,l: item not in prog or mod.can_substitute(l.hash)
+    def spot_ok(item,l,placed):
+        if item not in prog: return True
+        if not mod.can_substitute(l.hash): return False   # small chests only
+        # a three-tier chest picks its last tier when it loads, so copies can't share an area (see progressive.py)
+        area=mod.chest_area(l.hash)
+        return len(prog[item])<3 or not any(placed.get(o.name)==item and mod.chest_area(o.hash)==area for o in locs if o.hash)
     placed=assumed_fill(locs,world.PROGRESSION,filler,random.Random(seed),world.goal,world.RESTRICTED,spot_ok)
     for l in locs:
         if l.fixed: continue

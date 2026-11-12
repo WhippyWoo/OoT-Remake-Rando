@@ -27,6 +27,7 @@ It shuffles chest contents with logic, so every seed can be finished. Thank you 
 ## What's randomized (so far)
 - Chest contents in the areas of the world you picked. Song and NPC gifts, Skulltulas, scrubs and shops are not randomized yet.
 - Dungeon Maps and Compasses stay in their own dungeon. Small keys and Boss Keys stay where they normally are.
+- The Hookshot/Longshot and the Goron Bracelet/Silver/Gold Gauntlets are progressive: you always get the next one.
 - Chests marked `[junk only]` in the spoiler are ones whose requirements aren't confirmed yet: they only hold rupees and
   similar items. Telling us where they are and what you needed to reach them helps a lot.
 
